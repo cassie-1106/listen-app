@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -24,13 +23,14 @@
     font-family: 'Noto Sans KR', sans-serif;
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
+  /* 상단 헤더 - 고정 */
   .header {
     display: flex;
     align-items: center;
@@ -84,14 +84,18 @@
     50% { opacity: 0.4; transform: scale(0.8); }
   }
 
+  /* 텍스트 영역 - 스크롤 가능, flex로 남은 공간 차지 */
   .text-area {
     flex: 1;
     overflow-y: auto;
-    padding: 24px 20px 16px;
+    overflow-x: hidden;
+    padding: 16px 20px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    justify-content: flex-end; /* 새 내용이 아래쪽에 붙음 */
+    gap: 8px;
     -webkit-overflow-scrolling: touch;
+    min-height: 0; /* flex 자식에서 스크롤 되려면 필요 */
   }
 
   .placeholder {
@@ -99,7 +103,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    flex: 1;
     gap: 12px;
     color: var(--muted);
     text-align: center;
@@ -108,16 +112,23 @@
   .placeholder-icon { font-size: 48px; opacity: 0.3; }
   .placeholder-text { font-size: 15px; line-height: 1.6; max-width: 240px; }
 
+  /* 텍스트 블록 컨테이너 - 채팅처럼 위로 쌓임 */
+  .transcripts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .transcript-block {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 16px 18px;
-    animation: slideIn 0.2s ease;
+    padding: 14px 16px;
+    animation: slideUp 0.2s ease;
   }
 
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(8px); }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
@@ -132,25 +143,27 @@
   .transcript-time {
     font-size: 11px;
     color: var(--muted);
-    margin-top: 8px;
+    margin-top: 6px;
   }
 
+  /* 실시간 인식 중 텍스트 */
   .interim-text {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 400;
     line-height: 1.55;
-    color: rgba(240, 240, 245, 0.45);
-    padding: 0 4px;
+    color: rgba(240, 240, 245, 0.4);
+    padding: 8px 4px;
     letter-spacing: -0.3px;
     word-break: keep-all;
-    min-height: 32px;
+    min-height: 28px;
   }
 
+  /* 하단 컨트롤 - 항상 고정 */
   .controls {
-    padding: 16px 20px 32px;
+    padding: 12px 20px 32px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     flex-shrink: 0;
     border-top: 1px solid var(--border);
     background: var(--bg);
@@ -225,13 +238,9 @@
     text-align: center;
     font-size: 11px;
     color: var(--muted);
-    padding-top: 4px;
   }
 
-  .engine-badge span {
-    color: var(--accent);
-    font-weight: 700;
-  }
+  .engine-badge span { color: var(--accent); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -249,6 +258,7 @@
     <div class="placeholder-icon">🎙️</div>
     <div class="placeholder-text">아래 버튼을 눌러<br>음성 인식을 시작하세요</div>
   </div>
+  <div class="transcripts-container" id="transcriptsContainer"></div>
   <div class="interim-text" id="interimText"></div>
 </div>
 
@@ -279,6 +289,7 @@
   const textArea = document.getElementById('textArea');
   const placeholder = document.getElementById('placeholder');
   const interimText = document.getElementById('interimText');
+  const transcriptsContainer = document.getElementById('transcriptsContainer');
   const statusBadge = document.getElementById('statusBadge');
   const statusText = document.getElementById('statusText');
   const mainBtn = document.getElementById('mainBtn');
@@ -331,7 +342,7 @@
     };
 
     mediaRecorder.onstop = async () => {
-      if (!isListening && audioChunks.length === 0) return;
+      if (audioChunks.length === 0) return;
       const blob = new Blob(audioChunks, { type: 'audio/webm' });
       await sendToGoogle(blob);
     };
@@ -387,19 +398,22 @@
     if (!text) return;
     const now = new Date();
     const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
     const block = document.createElement('div');
     block.className = 'transcript-block';
     block.innerHTML = `
       <div class="transcript-text" style="font-size:${fontSize}px">${text}</div>
       <div class="transcript-time">${timeStr}</div>
     `;
-    textArea.insertBefore(block, interimText);
+
+    transcriptsContainer.appendChild(block);
+
+    // 자동 스크롤 - 항상 최신 내용이 보이도록
     textArea.scrollTop = textArea.scrollHeight;
   }
 
   function clearAll() {
-    const blocks = textArea.querySelectorAll('.transcript-block');
-    blocks.forEach(b => b.remove());
+    transcriptsContainer.innerHTML = '';
     interimText.textContent = '';
     if (!isListening) placeholder.style.display = 'flex';
   }
@@ -412,7 +426,6 @@
     });
   }
 
-  // 화면 꺼짐 방지
   async function requestWakeLock() {
     try {
       if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');

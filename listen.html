@@ -116,22 +116,12 @@
     gap: 8px;
   }
 
-  /* 확정된 텍스트 박스 */
   .transcript-block {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 14px 16px;
     animation: slideUp 0.2s ease;
-  }
-
-  /* 브라우저 실시간 자막 박스 - 항상 맨 아래 */
-  .interim-block {
-    background: rgba(126, 232, 162, 0.05);
-    border: 1px solid rgba(126, 232, 162, 0.2);
-    border-radius: 16px;
-    padding: 14px 16px;
-    min-height: 52px;
   }
 
   @keyframes slideUp {
@@ -145,23 +135,6 @@
     line-height: 1.55;
     letter-spacing: -0.3px;
     word-break: keep-all;
-  }
-
-  /* 실시간 자막 텍스트 - 더 밝게 */
-  .interim-live {
-    font-size: 22px;
-    font-weight: 400;
-    line-height: 1.55;
-    color: rgba(240, 240, 245, 0.6);
-    letter-spacing: -0.3px;
-    word-break: keep-all;
-  }
-
-  .interim-label {
-    font-size: 10px;
-    color: var(--accent);
-    margin-bottom: 6px;
-    opacity: 0.7;
   }
 
   .transcript-time {
@@ -270,11 +243,6 @@
     <div class="placeholder-text">아래 버튼을 눌러<br>음성 인식을 시작하세요</div>
   </div>
   <div class="transcripts-container" id="transcriptsContainer"></div>
-  <!-- 실시간 자막 박스 - 항상 맨 아래 고정 -->
-  <div class="interim-block" id="interimBlock" style="display:none">
-    <div class="interim-label">실시간 인식 중...</div>
-    <div class="interim-live" id="interimText"></div>
-  </div>
 </div>
 
 <div class="controls">
@@ -287,21 +255,19 @@
     <button class="btn-clear" onclick="clearAll()">전체 지우기</button>
     <button class="btn-main" id="mainBtn" onclick="toggleListening()">🎙️ 시작</button>
   </div>
-  <div class="engine-badge">실시간 <span>브라우저</span> · 정확도 <span>Google API</span></div>
+  <div class="engine-badge">powered by <span>Google Speech-to-Text</span></div>
 </div>
 
 <script>
   // ⚠️ 여기에 본인 API 키 넣어요!
   const GOOGLE_API_KEY = 'AIzaSyC8ru6eHM9YlbIaYwWRLbgJownM334md5w';
 
+  // ⏱ 딜레이 설정 (밀리초) - 2000 = 2초
+  const CHUNK_INTERVAL = 2000;
+  const CHUNK_DURATION = 1800;
+
   let isListening = false;
   let fontSize = 22;
-
-  // 브라우저 음성인식 (실시간)
-  let recognition = null;
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  // 구글 API (정확도)
   let mediaRecorder = null;
   let audioChunks = [];
   let recordingInterval = null;
@@ -309,47 +275,11 @@
 
   const textArea = document.getElementById('textArea');
   const placeholder = document.getElementById('placeholder');
-  const interimText = document.getElementById('interimText');
-  const interimBlock = document.getElementById('interimBlock');
   const transcriptsContainer = document.getElementById('transcriptsContainer');
   const statusBadge = document.getElementById('statusBadge');
   const statusText = document.getElementById('statusText');
   const mainBtn = document.getElementById('mainBtn');
   const fontSizeLabel = document.getElementById('fontSizeLabel');
-
-  // 브라우저 인식 초기화
-  function initRecognition() {
-    if (!SpeechRecognition) return;
-    recognition = new SpeechRecognition();
-    recognition.lang = 'ko-KR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onresult = (event) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (!event.results[i].isFinal) {
-          interim += event.results[i][0].transcript;
-        }
-      }
-      // 실시간 자막만 표시 (확정은 구글 API가 처리)
-      if (interim) {
-        interimBlock.style.display = 'block';
-        interimText.textContent = interim;
-        textArea.scrollTop = textArea.scrollHeight;
-      }
-    };
-
-    recognition.onend = () => {
-      if (isListening) {
-        try { recognition.start(); } catch(e) {}
-      }
-    };
-
-    recognition.onerror = (e) => {
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-    };
-  }
 
   async function toggleListening() {
     if (isListening) {
@@ -369,16 +299,8 @@
       mainBtn.textContent = '⏹ 중지';
       mainBtn.classList.add('active');
 
-      // 브라우저 실시간 자막 시작
-      if (SpeechRecognition) {
-        initRecognition();
-        try { recognition.start(); } catch(e) {}
-      }
-
-      // 구글 API 녹음 시작
       recordChunk();
-      recordingInterval = setInterval(recordChunk, 4000);
-
+      recordingInterval = setInterval(recordChunk, CHUNK_INTERVAL);
     } catch(e) {
       alert('마이크 권한을 허용해주세요!');
     }
@@ -386,7 +308,6 @@
 
   function stopListening() {
     isListening = false;
-    if (recognition) { try { recognition.stop(); } catch(e) {} }
     if (recordingInterval) clearInterval(recordingInterval);
     if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     if (stream) stream.getTracks().forEach(t => t.stop());
@@ -394,8 +315,6 @@
     statusText.textContent = '대기 중';
     mainBtn.textContent = '🎙️ 시작';
     mainBtn.classList.remove('active');
-    interimText.textContent = '';
-    interimBlock.style.display = 'none';
   }
 
   function recordChunk() {
@@ -418,7 +337,7 @@
       if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
       }
-    }, 3500);
+    }, CHUNK_DURATION);
   }
 
   async function sendToGoogle(blob) {
@@ -438,7 +357,7 @@
                 sampleRateHertz: 48000,
                 languageCode: 'ko-KR',
                 enableAutomaticPunctuation: true,
-                model: 'latest_long'
+                model: 'latest_short'
               },
               audio: { content: base64 }
             })
@@ -478,8 +397,6 @@
 
   function clearAll() {
     transcriptsContainer.innerHTML = '';
-    interimText.textContent = '';
-    interimBlock.style.display = 'none';
     if (!isListening) placeholder.style.display = 'flex';
   }
 

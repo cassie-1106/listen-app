@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -7,225 +8,215 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&display=swap');
 
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+- { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-  :root {
-    --bg: #0a0a0f;
-    --surface: #13131a;
-    --border: #1e1e2e;
-    --accent: #7ee8a2;
-    --danger: #f87171;
-    --text: #f0f0f5;
-    --muted: #6b6b80;
-  }
+:root {
+–bg: #0a0a0f;
+–border: #1e1e2e;
+–accent: #7ee8a2;
+–danger: #f87171;
+–text: #f0f0f5;
+–muted: #6b6b80;
+–surface: #13131a;
+}
 
-  body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+body {
+font-family: ‘Noto Sans KR’, sans-serif;
+background: var(–bg);
+color: var(–text);
+height: 100vh;
+height: 100dvh;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
 
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px 12px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
+.header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 16px 20px 12px;
+border-bottom: 1px solid var(–border);
+flex-shrink: 0;
+}
 
-  .app-name {
-    font-size: 18px;
-    font-weight: 900;
-    letter-spacing: -0.5px;
-    color: var(--accent);
-  }
+.app-name {
+font-size: 18px;
+font-weight: 900;
+letter-spacing: -0.5px;
+color: var(–accent);
+}
 
-  .status-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--muted);
-    background: var(--surface);
-    padding: 5px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    transition: all 0.3s;
-  }
+.status-badge {
+display: flex;
+align-items: center;
+gap: 6px;
+font-size: 12px;
+color: var(–muted);
+background: var(–surface);
+padding: 5px 10px;
+border-radius: 20px;
+border: 1px solid var(–border);
+transition: all 0.3s;
+}
 
-  .status-badge.listening {
-    color: var(--accent);
-    border-color: var(--accent);
-    background: rgba(126, 232, 162, 0.08);
-  }
+.status-badge.listening {
+color: var(–accent);
+border-color: var(–accent);
+background: rgba(126, 232, 162, 0.08);
+}
 
-  .status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: all 0.3s;
-  }
+.status-dot {
+width: 7px;
+height: 7px;
+border-radius: 50%;
+background: var(–muted);
+transition: all 0.3s;
+}
 
-  .status-badge.listening .status-dot {
-    background: var(--accent);
-    animation: pulse 1.2s ease-in-out infinite;
-  }
+.status-badge.listening .status-dot {
+background: var(–accent);
+animation: pulse 1.2s ease-in-out infinite;
+}
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.8); }
-  }
+@keyframes pulse {
+0%, 100% { opacity: 1; transform: scale(1); }
+50% { opacity: 0.4; transform: scale(0.8); }
+}
 
-  .text-area {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 8px;
-    -webkit-overflow-scrolling: touch;
-    min-height: 0;
-  }
+/* 텍스트 영역 - 스크롤 가능 */
+.text-area {
+flex: 1;
+overflow-y: auto;
+overflow-x: hidden;
+padding: 24px 24px 16px;
+display: flex;
+flex-direction: column;
+justify-content: flex-end;
+-webkit-overflow-scrolling: touch;
+min-height: 0;
+}
 
-  .placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    gap: 12px;
-    color: var(--muted);
-    text-align: center;
-  }
+/* 플레이스홀더 */
+.placeholder {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+flex: 1;
+gap: 12px;
+color: var(–muted);
+text-align: center;
+}
 
-  .placeholder-icon { font-size: 48px; opacity: 0.3; }
-  .placeholder-text { font-size: 15px; line-height: 1.6; max-width: 240px; }
+.placeholder-icon { font-size: 48px; opacity: 0.3; }
+.placeholder-text { font-size: 15px; line-height: 1.6; max-width: 240px; }
 
-  .transcripts-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+/* 흘러가는 텍스트 영역 */
+.live-text {
+font-size: 26px;
+font-weight: 400;
+line-height: 1.65;
+letter-spacing: -0.3px;
+word-break: keep-all;
+white-space: pre-wrap;
+}
 
-  .transcript-block {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 14px 16px;
-    animation: slideUp 0.2s ease;
-  }
+/* 확정된 텍스트 - 밝게 */
+.confirmed {
+color: var(–text);
+}
 
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+/* 실시간 인식 중 텍스트 - 흐리게 */
+.interim {
+color: rgba(240, 240, 245, 0.4);
+}
 
-  .transcript-text {
-    font-size: 22px;
-    font-weight: 400;
-    line-height: 1.55;
-    letter-spacing: -0.3px;
-    word-break: keep-all;
-  }
+/* 하단 컨트롤 */
+.controls {
+padding: 12px 20px 32px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+flex-shrink: 0;
+border-top: 1px solid var(–border);
+background: var(–bg);
+}
 
-  .transcript-time {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 6px;
-  }
+.font-controls {
+display: flex;
+align-items: center;
+gap: 8px;
+justify-content: center;
+}
 
-  .controls {
-    padding: 12px 20px 32px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex-shrink: 0;
-    border-top: 1px solid var(--border);
-    background: var(--bg);
-  }
+.font-label {
+font-size: 11px;
+color: var(–muted);
+width: 60px;
+text-align: center;
+}
 
-  .font-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: center;
-  }
+.font-btn {
+width: 36px;
+height: 36px;
+border-radius: 50%;
+border: 1px solid var(–border);
+background: var(–surface);
+color: var(–text);
+font-size: 18px;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.15s;
+}
 
-  .font-label {
-    font-size: 11px;
-    color: var(--muted);
-    width: 60px;
-    text-align: center;
-  }
+.font-btn:active { transform: scale(0.92); }
 
-  .font-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-  }
+.btn-row { display: flex; gap: 10px; }
 
-  .font-btn:active { transform: scale(0.92); }
+.btn-clear {
+flex: 1;
+height: 54px;
+border-radius: 14px;
+border: 1px solid var(–border);
+background: var(–surface);
+color: var(–muted);
+font-size: 14px;
+font-family: ‘Noto Sans KR’, sans-serif;
+cursor: pointer;
+transition: all 0.15s;
+}
 
-  .btn-row { display: flex; gap: 10px; }
+.btn-clear:active { color: var(–danger); border-color: var(–danger); }
 
-  .btn-clear {
-    flex: 1;
-    height: 54px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-size: 14px;
-    font-family: 'Noto Sans KR', sans-serif;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
+.btn-main {
+flex: 2;
+height: 54px;
+border-radius: 14px;
+border: none;
+background: var(–accent);
+color: #0a0a0f;
+font-size: 16px;
+font-family: ‘Noto Sans KR’, sans-serif;
+font-weight: 700;
+cursor: pointer;
+transition: all 0.2s;
+}
 
-  .btn-clear:active { color: var(--danger); border-color: var(--danger); }
+.btn-main.active { background: var(–danger); color: white; }
+.btn-main:active { transform: scale(0.97); }
 
-  .btn-main {
-    flex: 2;
-    height: 54px;
-    border-radius: 14px;
-    border: none;
-    background: var(--accent);
-    color: #0a0a0f;
-    font-size: 16px;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+.engine-badge {
+text-align: center;
+font-size: 11px;
+color: var(–muted);
+}
 
-  .btn-main.active { background: var(--danger); color: white; }
-  .btn-main:active { transform: scale(0.97); }
-
-  .engine-badge {
-    text-align: center;
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .engine-badge span { color: var(--accent); font-weight: 700; }
+.engine-badge span { color: var(–accent); font-weight: 700; }
 </style>
+
 </head>
 <body>
 
@@ -242,44 +233,98 @@
     <div class="placeholder-icon">🎙️</div>
     <div class="placeholder-text">아래 버튼을 눌러<br>음성 인식을 시작하세요</div>
   </div>
-  <div class="transcripts-container" id="transcriptsContainer"></div>
+  <!-- 확정 텍스트 -->
+  <span class="live-text confirmed" id="confirmedText"></span>
+  <!-- 실시간 텍스트 -->
+  <span class="live-text interim" id="interimText"></span>
 </div>
 
 <div class="controls">
   <div class="font-controls">
     <button class="font-btn" onclick="changeFontSize(-2)">A−</button>
-    <div class="font-label" id="fontSizeLabel">22px</div>
+    <div class="font-label" id="fontSizeLabel">26px</div>
     <button class="font-btn" onclick="changeFontSize(2)">A+</button>
   </div>
   <div class="btn-row">
     <button class="btn-clear" onclick="clearAll()">전체 지우기</button>
     <button class="btn-main" id="mainBtn" onclick="toggleListening()">🎙️ 시작</button>
   </div>
-  <div class="engine-badge">powered by <span>Google Speech-to-Text</span></div>
+  <div class="engine-badge">실시간 <span>브라우저</span> · 정확도 <span>Google API</span></div>
 </div>
 
 <script>
   // ⚠️ 여기에 본인 API 키 넣어요!
   const GOOGLE_API_KEY = 'AIzaSyC8ru6eHM9YlbIaYwWRLbgJownM334md5w';
 
-  // ⏱ 딜레이 설정 (밀리초) - 2000 = 2초
   const CHUNK_INTERVAL = 2000;
   const CHUNK_DURATION = 1800;
 
   let isListening = false;
-  let fontSize = 22;
+  let fontSize = 26;
+
+  // 브라우저 음성인식
+  let recognition = null;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  // 구글 API
   let mediaRecorder = null;
   let audioChunks = [];
   let recordingInterval = null;
   let stream = null;
 
+  // 확정된 텍스트 누적
+  let confirmedBuffer = '';
+  // 구글이 교체할 마지막 청크 위치
+  let lastChunkStart = 0;
+
   const textArea = document.getElementById('textArea');
   const placeholder = document.getElementById('placeholder');
-  const transcriptsContainer = document.getElementById('transcriptsContainer');
+  const confirmedText = document.getElementById('confirmedText');
+  const interimText = document.getElementById('interimText');
   const statusBadge = document.getElementById('statusBadge');
   const statusText = document.getElementById('statusText');
   const mainBtn = document.getElementById('mainBtn');
   const fontSizeLabel = document.getElementById('fontSizeLabel');
+
+  function initRecognition() {
+    if (!SpeechRecognition) return;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      let final = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          final += event.results[i][0].transcript;
+        } else {
+          interim += event.results[i][0].transcript;
+        }
+      }
+
+      if (final) {
+        confirmedBuffer += final;
+        lastChunkStart = confirmedBuffer.length;
+        confirmedText.textContent = confirmedBuffer;
+      }
+
+      interimText.textContent = interim;
+      textArea.scrollTop = textArea.scrollHeight;
+    };
+
+    recognition.onend = () => {
+      if (isListening) {
+        try { recognition.start(); } catch(e) {}
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+    };
+  }
 
   async function toggleListening() {
     if (isListening) {
@@ -299,8 +344,16 @@
       mainBtn.textContent = '⏹ 중지';
       mainBtn.classList.add('active');
 
+      // 브라우저 실시간 자막
+      if (SpeechRecognition) {
+        initRecognition();
+        try { recognition.start(); } catch(e) {}
+      }
+
+      // 구글 API
       recordChunk();
       recordingInterval = setInterval(recordChunk, CHUNK_INTERVAL);
+
     } catch(e) {
       alert('마이크 권한을 허용해주세요!');
     }
@@ -308,6 +361,7 @@
 
   function stopListening() {
     isListening = false;
+    if (recognition) { try { recognition.stop(); } catch(e) {} }
     if (recordingInterval) clearInterval(recordingInterval);
     if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     if (stream) stream.getTracks().forEach(t => t.stop());
@@ -315,11 +369,16 @@
     statusText.textContent = '대기 중';
     mainBtn.textContent = '🎙️ 시작';
     mainBtn.classList.remove('active');
+    interimText.textContent = '';
   }
 
   function recordChunk() {
     if (!stream || !isListening) return;
     audioChunks = [];
+
+    // 구글이 교체할 시작점 기록
+    const chunkStart = confirmedBuffer.length;
+
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
     mediaRecorder.ondataavailable = e => {
@@ -329,7 +388,7 @@
     mediaRecorder.onstop = async () => {
       if (audioChunks.length === 0) return;
       const blob = new Blob(audioChunks, { type: 'audio/webm' });
-      await sendToGoogle(blob);
+      await sendToGoogle(blob, chunkStart);
     };
 
     mediaRecorder.start();
@@ -340,7 +399,7 @@
     }, CHUNK_DURATION);
   }
 
-  async function sendToGoogle(blob) {
+  async function sendToGoogle(blob, chunkStart) {
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
@@ -367,10 +426,16 @@
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
-          const transcript = data.results
+          const googleText = data.results
             .map(r => r.alternatives[0].transcript)
             .join(' ');
-          if (transcript.trim()) addTranscript(transcript.trim());
+
+          if (googleText.trim()) {
+            // 구글 텍스트로 해당 청크 부분만 교체
+            confirmedBuffer = confirmedBuffer.substring(0, chunkStart) + googleText.trim() + ' ';
+            confirmedText.textContent = confirmedBuffer;
+            textArea.scrollTop = textArea.scrollHeight;
+          }
         }
       };
       reader.readAsDataURL(blob);
@@ -379,33 +444,19 @@
     }
   }
 
-  function addTranscript(text) {
-    if (!text) return;
-    const now = new Date();
-    const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-
-    const block = document.createElement('div');
-    block.className = 'transcript-block';
-    block.innerHTML = `
-      <div class="transcript-text" style="font-size:${fontSize}px">${text}</div>
-      <div class="transcript-time">${timeStr}</div>
-    `;
-
-    transcriptsContainer.appendChild(block);
-    textArea.scrollTop = textArea.scrollHeight;
-  }
-
   function clearAll() {
-    transcriptsContainer.innerHTML = '';
+    confirmedBuffer = '';
+    lastChunkStart = 0;
+    confirmedText.textContent = '';
+    interimText.textContent = '';
     if (!isListening) placeholder.style.display = 'flex';
   }
 
   function changeFontSize(delta) {
-    fontSize = Math.max(16, Math.min(36, fontSize + delta));
+    fontSize = Math.max(16, Math.min(40, fontSize + delta));
     fontSizeLabel.textContent = fontSize + 'px';
-    document.querySelectorAll('.transcript-text').forEach(el => {
-      el.style.fontSize = fontSize + 'px';
-    });
+    confirmedText.style.fontSize = fontSize + 'px';
+    interimText.style.fontSize = fontSize + 'px';
   }
 
   async function requestWakeLock() {
@@ -415,5 +466,6 @@
   }
   requestWakeLock();
 </script>
+
 </body>
 </html>

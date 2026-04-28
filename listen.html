@@ -30,7 +30,6 @@
     overflow: hidden;
   }
 
-  /* 상단 헤더 - 고정 */
   .header {
     display: flex;
     align-items: center;
@@ -84,7 +83,6 @@
     50% { opacity: 0.4; transform: scale(0.8); }
   }
 
-  /* 텍스트 영역 - 스크롤 가능, flex로 남은 공간 차지 */
   .text-area {
     flex: 1;
     overflow-y: auto;
@@ -92,10 +90,10 @@
     padding: 16px 20px;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* 새 내용이 아래쪽에 붙음 */
+    justify-content: flex-end;
     gap: 8px;
     -webkit-overflow-scrolling: touch;
-    min-height: 0; /* flex 자식에서 스크롤 되려면 필요 */
+    min-height: 0;
   }
 
   .placeholder {
@@ -112,19 +110,28 @@
   .placeholder-icon { font-size: 48px; opacity: 0.3; }
   .placeholder-text { font-size: 15px; line-height: 1.6; max-width: 240px; }
 
-  /* 텍스트 블록 컨테이너 - 채팅처럼 위로 쌓임 */
   .transcripts-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
 
+  /* 확정된 텍스트 박스 */
   .transcript-block {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 14px 16px;
     animation: slideUp 0.2s ease;
+  }
+
+  /* 브라우저 실시간 자막 박스 - 항상 맨 아래 */
+  .interim-block {
+    background: rgba(126, 232, 162, 0.05);
+    border: 1px solid rgba(126, 232, 162, 0.2);
+    border-radius: 16px;
+    padding: 14px 16px;
+    min-height: 52px;
   }
 
   @keyframes slideUp {
@@ -140,25 +147,29 @@
     word-break: keep-all;
   }
 
+  /* 실시간 자막 텍스트 - 더 밝게 */
+  .interim-live {
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.55;
+    color: rgba(240, 240, 245, 0.6);
+    letter-spacing: -0.3px;
+    word-break: keep-all;
+  }
+
+  .interim-label {
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    opacity: 0.7;
+  }
+
   .transcript-time {
     font-size: 11px;
     color: var(--muted);
     margin-top: 6px;
   }
 
-  /* 실시간 인식 중 텍스트 */
-  .interim-text {
-    font-size: 20px;
-    font-weight: 400;
-    line-height: 1.55;
-    color: rgba(240, 240, 245, 0.4);
-    padding: 8px 4px;
-    letter-spacing: -0.3px;
-    word-break: keep-all;
-    min-height: 28px;
-  }
-
-  /* 하단 컨트롤 - 항상 고정 */
   .controls {
     padding: 12px 20px 32px;
     display: flex;
@@ -198,7 +209,7 @@
     transition: all 0.15s;
   }
 
-  .font-btn:active { transform: scale(0.92); background: var(--border); }
+  .font-btn:active { transform: scale(0.92); }
 
   .btn-row { display: flex; gap: 10px; }
 
@@ -215,7 +226,7 @@
     transition: all 0.15s;
   }
 
-  .btn-clear:active { transform: scale(0.97); color: var(--danger); border-color: var(--danger); }
+  .btn-clear:active { color: var(--danger); border-color: var(--danger); }
 
   .btn-main {
     flex: 2;
@@ -259,7 +270,11 @@
     <div class="placeholder-text">아래 버튼을 눌러<br>음성 인식을 시작하세요</div>
   </div>
   <div class="transcripts-container" id="transcriptsContainer"></div>
-  <div class="interim-text" id="interimText"></div>
+  <!-- 실시간 자막 박스 - 항상 맨 아래 고정 -->
+  <div class="interim-block" id="interimBlock" style="display:none">
+    <div class="interim-label">실시간 인식 중...</div>
+    <div class="interim-live" id="interimText"></div>
+  </div>
 </div>
 
 <div class="controls">
@@ -272,7 +287,7 @@
     <button class="btn-clear" onclick="clearAll()">전체 지우기</button>
     <button class="btn-main" id="mainBtn" onclick="toggleListening()">🎙️ 시작</button>
   </div>
-  <div class="engine-badge">powered by <span>Google Speech-to-Text</span></div>
+  <div class="engine-badge">실시간 <span>브라우저</span> · 정확도 <span>Google API</span></div>
 </div>
 
 <script>
@@ -281,6 +296,12 @@
 
   let isListening = false;
   let fontSize = 22;
+
+  // 브라우저 음성인식 (실시간)
+  let recognition = null;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  // 구글 API (정확도)
   let mediaRecorder = null;
   let audioChunks = [];
   let recordingInterval = null;
@@ -289,11 +310,46 @@
   const textArea = document.getElementById('textArea');
   const placeholder = document.getElementById('placeholder');
   const interimText = document.getElementById('interimText');
+  const interimBlock = document.getElementById('interimBlock');
   const transcriptsContainer = document.getElementById('transcriptsContainer');
   const statusBadge = document.getElementById('statusBadge');
   const statusText = document.getElementById('statusText');
   const mainBtn = document.getElementById('mainBtn');
   const fontSizeLabel = document.getElementById('fontSizeLabel');
+
+  // 브라우저 인식 초기화
+  function initRecognition() {
+    if (!SpeechRecognition) return;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results[i].isFinal) {
+          interim += event.results[i][0].transcript;
+        }
+      }
+      // 실시간 자막만 표시 (확정은 구글 API가 처리)
+      if (interim) {
+        interimBlock.style.display = 'block';
+        interimText.textContent = interim;
+        textArea.scrollTop = textArea.scrollHeight;
+      }
+    };
+
+    recognition.onend = () => {
+      if (isListening) {
+        try { recognition.start(); } catch(e) {}
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+    };
+  }
 
   async function toggleListening() {
     if (isListening) {
@@ -313,8 +369,16 @@
       mainBtn.textContent = '⏹ 중지';
       mainBtn.classList.add('active');
 
+      // 브라우저 실시간 자막 시작
+      if (SpeechRecognition) {
+        initRecognition();
+        try { recognition.start(); } catch(e) {}
+      }
+
+      // 구글 API 녹음 시작
       recordChunk();
       recordingInterval = setInterval(recordChunk, 4000);
+
     } catch(e) {
       alert('마이크 권한을 허용해주세요!');
     }
@@ -322,6 +386,7 @@
 
   function stopListening() {
     isListening = false;
+    if (recognition) { try { recognition.stop(); } catch(e) {} }
     if (recordingInterval) clearInterval(recordingInterval);
     if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     if (stream) stream.getTracks().forEach(t => t.stop());
@@ -330,6 +395,7 @@
     mainBtn.textContent = '🎙️ 시작';
     mainBtn.classList.remove('active');
     interimText.textContent = '';
+    interimBlock.style.display = 'none';
   }
 
   function recordChunk() {
@@ -407,14 +473,13 @@
     `;
 
     transcriptsContainer.appendChild(block);
-
-    // 자동 스크롤 - 항상 최신 내용이 보이도록
     textArea.scrollTop = textArea.scrollHeight;
   }
 
   function clearAll() {
     transcriptsContainer.innerHTML = '';
     interimText.textContent = '';
+    interimBlock.style.display = 'none';
     if (!isListening) placeholder.style.display = 'flex';
   }
 

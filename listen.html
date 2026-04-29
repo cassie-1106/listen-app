@@ -262,44 +262,58 @@
   const mainBtn = document.getElementById('mainBtn');
   const fontSizeLabel = document.getElementById('fontSizeLabel');
 
-  function initRecognition() {
-    if (!SpeechRecognition) return;
-    recognition = new SpeechRecognition();
-    recognition.lang = 'ko-KR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
+let recognitionRestartTimer = null;
 
-    recognition.onresult = (event) => {
-      let interim = '';
-      let final = '';
+function initRecognition() {
+  if (!SpeechRecognition) return;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ko-KR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          final += event.results[i][0].transcript;
-        } else {
-          interim += event.results[i][0].transcript;
-        }
+  recognition.onresult = (event) => {
+    let interim = '';
+    let final = '';
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        final += event.results[i][0].transcript;
+      } else {
+        interim += event.results[i][0].transcript;
       }
+    }
 
-      if (final) {
-        confirmedBuffer += final;
-        confirmedText.textContent = confirmedBuffer;
-      }
+    if (final) {
+      confirmedBuffer += final;
+      confirmedText.textContent = confirmedBuffer;
+    }
 
-      interimText.textContent = interim;
-      textArea.scrollTop = textArea.scrollHeight;
-    };
+    interimText.textContent = interim;
+    textArea.scrollTop = textArea.scrollHeight;
+  };
 
-    recognition.onend = () => {
-      if (isListening) {
-        try { recognition.start(); } catch(e) {}
-      }
-    };
+  recognition.onend = () => {
+    if (isListening) {
+      try { recognition.start(); } catch(e) {}
+    }
+  };
 
-    recognition.onerror = (e) => {
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-    };
-  }
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+  };
+}
+
+function scheduleRecognitionRestart() {
+  if (recognitionRestartTimer) clearTimeout(recognitionRestartTimer);
+  recognitionRestartTimer = setTimeout(() => {
+    if (!isListening) return;
+    try {
+      recognition.stop(); // onend에서 자동 재시작됨
+    } catch(e) {}
+    scheduleRecognitionRestart(); // 다음 재시작 예약
+  }, 25000); // 25초마다
+}
+
 
   async function toggleListening() {
     if (isListening) {
@@ -322,6 +336,8 @@
       if (SpeechRecognition) {
         initRecognition();
         try { recognition.start(); } catch(e) {}
+        scheduleRecognitionRestart();
+
       }
 
       recordChunk();

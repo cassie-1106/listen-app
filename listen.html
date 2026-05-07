@@ -246,6 +246,51 @@
   const mainBtn = document.getElementById('mainBtn');
   const fontSizeLabel = document.getElementById('fontSizeLabel');
 
+  function setupWebSocket() {
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen = () => {
+      console.log('WebSocket 연결됨');
+      if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(e.data);
+          }
+        };
+        mediaRecorder.start(100);
+      }
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'final') {
+        confirmedBuffer += data.text + ' ';
+        confirmedText.textContent = confirmedBuffer;
+        interimText.textContent = '';
+      } else if (data.type === 'interim') {
+        interimText.textContent = data.text;
+      }
+      textArea.scrollTop = textArea.scrollHeight;
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket 끊김, 재연결 시도');
+      if (isListening) {
+        setTimeout(() => {
+          if (isListening) {
+            ws = new WebSocket(WS_URL);
+            setupWebSocket();
+          }
+        }, 500);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error('WebSocket 에러:', err);
+    };
+  }
+
   async function toggleListening() {
     if (isListening) {
       stopListening();
@@ -262,48 +307,15 @@
       return;
     }
 
+    isListening = true;
+    placeholder.style.display = 'none';
+    statusBadge.classList.add('listening');
+    statusText.textContent = '듣는 중';
+    mainBtn.textContent = '⏹ 중지';
+    mainBtn.classList.add('active');
+
     ws = new WebSocket(WS_URL);
-    ws.binaryType = 'arraybuffer';
-
-    ws.onopen = () => {
-      isListening = true;
-      placeholder.style.display = 'none';
-      statusBadge.classList.add('listening');
-      statusText.textContent = '듣는 중';
-      mainBtn.textContent = '⏹ 중지';
-      mainBtn.classList.add('active');
-
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-          ws.send(e.data);
-        }
-      };
-      mediaRecorder.start(100);
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'final') {
-        confirmedBuffer += data.text + ' ';
-        confirmedText.textContent = confirmedBuffer;
-        interimText.textContent = '';
-      } else if (data.type === 'interim') {
-        interimText.textContent = data.text;
-      } else if (data.type === 'error') {
-        console.error('서버 에러:', data.message);
-      }
-      textArea.scrollTop = textArea.scrollHeight;
-    };
-
-    ws.onclose = () => {
-      if (isListening) stopListening();
-    };
-
-    ws.onerror = () => {
-      alert('서버 연결 오류가 발생했어요.');
-      stopListening();
-    };
+    setupWebSocket();
   }
 
   function stopListening() {
@@ -311,6 +323,9 @@
     if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     if (stream) stream.getTracks().forEach(t => t.stop());
     if (ws) ws.close();
+    mediaRecorder = null;
+    stream = null;
+    ws = null;
 
     statusBadge.classList.remove('listening');
     statusText.textContent = '대기 중';

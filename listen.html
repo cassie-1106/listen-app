@@ -262,17 +262,29 @@
       }
     };
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'final') {
-        confirmedBuffer += data.text + ' ';
+let interimTimer = null;
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'final') {
+    if (interimTimer) clearTimeout(interimTimer);
+    confirmedBuffer += data.text + ' ';
+    confirmedText.textContent = confirmedBuffer;
+    interimText.textContent = '';
+  } else if (data.type === 'interim') {
+    interimText.textContent = data.text;
+    // 2초 동안 업데이트 없으면 강제로 확정
+    if (interimTimer) clearTimeout(interimTimer);
+    interimTimer = setTimeout(() => {
+      if (interimText.textContent) {
+        confirmedBuffer += interimText.textContent + ' ';
         confirmedText.textContent = confirmedBuffer;
         interimText.textContent = '';
-      } else if (data.type === 'interim') {
-        interimText.textContent = data.text;
       }
-      textArea.scrollTop = textArea.scrollHeight;
-    };
+    }, 2000);
+  }
+  textArea.scrollTop = textArea.scrollHeight;
+};
 
     ws.onclose = () => {
       console.log('WebSocket 끊김, 재연결 시도');

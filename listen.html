@@ -228,26 +228,13 @@
 </div>
 
 <script>
-  const GOOGLE_API_KEY = 'AIzaSyC8ru6eHM9YlbIaYwWRLbgJownM334md5w';
-
-  // 구글 API 청크 간격 (브라우저 인식과 분리)
-  const CHUNK_INTERVAL = 3000;
-  const CHUNK_DURATION = 2800;
+  const WS_URL = 'wss://stt-server-production-58a8.up.railway.app';
 
   let isListening = false;
   let fontSize = 26;
   let confirmedBuffer = '';
-
-  // 브라우저 음성인식
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognition = null;
-  let recognitionActive = false;
-  let restartTimer = null;
-
-  // 구글 API
+  let ws = null;
   let mediaRecorder = null;
-  let audioChunks = [];
-  let recordingInterval = null;
   let stream = null;
 
   const textArea = document.getElementById('textArea');
@@ -259,144 +246,6 @@
   const mainBtn = document.getElementById('mainBtn');
   const fontSizeLabel = document.getElementById('fontSizeLabel');
 
-  // ── 브라우저 음성인식 ──────────────────────────
-  function startRecognition() {
-    if (!SpeechRecognition || recognitionActive || !isListening) return;
-
-    recognition = new SpeechRecognition();
-    recognition.lang = 'ko-KR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onstart = () => { recognitionActive = true; };
-
-    recognition.onresult = (event) => {
-      let interim = '';
-      let final = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          final += event.results[i][0].transcript;
-        } else {
-          interim += event.results[i][0].transcript;
-        }
-      }
-      if (final) {
-        confirmedBuffer += final;
-        confirmedText.textContent = confirmedBuffer;
-      }
-      interimText.textContent = interim;
-      textArea.scrollTop = textArea.scrollHeight;
-    };
-
-    recognition.onend = () => {
-      recognitionActive = false;
-      if (isListening) {
-        // 짧은 딜레이 후 재시작 (즉시 재시작하면 충돌)
-        setTimeout(() => startRecognition(), 300);
-      }
-    };
-
-    recognition.onerror = (e) => {
-      recognitionActive = false;
-      if (e.error === 'no-speech') return;
-      if (e.error === 'aborted') return;
-      if (isListening) {
-        setTimeout(() => startRecognition(), 500);
-      }
-    };
-
-    // 25초마다 부드럽게 재시작 (끊기기 전에 선제적으로)
-    if (restartTimer) clearTimeout(restartTimer);
-    restartTimer = setTimeout(() => {
-      if (isListening && recognitionActive) {
-        try { recognition.stop(); } catch(e) {}
-        // onend에서 자동 재시작됨
-      }
-      scheduleRestart();
-    }, 25000);
-
-    try { recognition.start(); } catch(e) {
-      recognitionActive = false;
-    }
-  }
-
-  function scheduleRestart() {
-    if (restartTimer) clearTimeout(restartTimer);
-    restartTimer = setTimeout(() => {
-      if (isListening && recognitionActive) {
-        try { recognition.stop(); } catch(e) {}
-      }
-      scheduleRestart();
-    }, 25000);
-  }
-
-  // ── 구글 API ──────────────────────────────────
-  function recordChunk() {
-    if (!stream || !isListening) return;
-    audioChunks = [];
-    const chunkStart = confirmedBuffer.length;
-
-    try {
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-    } catch(e) { return; }
-
-    mediaRecorder.ondataavailable = e => {
-      if (e.data.size > 0) audioChunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = async () => {
-      if (audioChunks.length === 0) return;
-      const blob = new Blob(audioChunks, { type: 'audio/webm' });
-      await sendToGoogle(blob, chunkStart);
-    };
-
-    mediaRecorder.start();
-    setTimeout(() => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-      }
-    }, CHUNK_DURATION);
-  }
-
-  async function sendToGoogle(blob, chunkStart) {
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result.split(',')[1];
-        const response = await fetch(
-          `https://speech.googleapis.com/v1/speech:recognize?key=${GOOGLE_API_KEY}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              config: {
-                encoding: 'WEBM_OPUS',
-                sampleRateHertz: 48000,
-                languageCode: 'ko-KR',
-                enableAutomaticPunctuation: true,
-                model: 'latest_short'
-              },
-              audio: { content: base64 }
-            })
-          }
-        );
-        const data = await response.json();
-        if (data.results && data.results.length > 0) {
-          const googleText = data.results
-            .map(r => r.alternatives[0].transcript)
-            .join(' ');
-          if (googleText.trim()) {
-            confirmedBuffer = confirmedBuffer.substring(0, chunkStart) + googleText.trim() + ' ';
-            confirmedText.textContent = confirmedBuffer;
-            textArea.scrollTop = textArea.scrollHeight;
-          }
-        }
-      };
-      reader.readAsDataURL(blob);
-    } catch(e) { console.error('API 오류:', e); }
-  }
-
-  // ── 시작 / 정지 ───────────────────────────────
   async function toggleListening() {
     if (isListening) {
       stopListening();
@@ -413,31 +262,55 @@
       return;
     }
 
-    isListening = true;
-    placeholder.style.display = 'none';
-    statusBadge.classList.add('listening');
-    statusText.textContent = '듣는 중';
-    mainBtn.textContent = '⏹ 중지';
-    mainBtn.classList.add('active');
+    ws = new WebSocket(WS_URL);
+    ws.binaryType = 'arraybuffer';
 
-    // 브라우저 인식 시작
-    startRecognition();
+    ws.onopen = () => {
+      isListening = true;
+      placeholder.style.display = 'none';
+      statusBadge.classList.add('listening');
+      statusText.textContent = '듣는 중';
+      mainBtn.textContent = '⏹ 중지';
+      mainBtn.classList.add('active');
 
-    // 구글 API 시작 (1초 딜레이로 충돌 방지)
-    setTimeout(() => {
-      recordChunk();
-      recordingInterval = setInterval(recordChunk, CHUNK_INTERVAL);
-    }, 1000);
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+          ws.send(e.data);
+        }
+      };
+      mediaRecorder.start(100);
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'final') {
+        confirmedBuffer += data.text + ' ';
+        confirmedText.textContent = confirmedBuffer;
+        interimText.textContent = '';
+      } else if (data.type === 'interim') {
+        interimText.textContent = data.text;
+      } else if (data.type === 'error') {
+        console.error('서버 에러:', data.message);
+      }
+      textArea.scrollTop = textArea.scrollHeight;
+    };
+
+    ws.onclose = () => {
+      if (isListening) stopListening();
+    };
+
+    ws.onerror = () => {
+      alert('서버 연결 오류가 발생했어요.');
+      stopListening();
+    };
   }
 
   function stopListening() {
     isListening = false;
-    recognitionActive = false;
-    if (restartTimer) clearTimeout(restartTimer);
-    if (recognition) { try { recognition.stop(); } catch(e) {} }
-    if (recordingInterval) clearInterval(recordingInterval);
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') { try { mediaRecorder.stop(); } catch(e) {} }
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     if (stream) stream.getTracks().forEach(t => t.stop());
+    if (ws) ws.close();
 
     statusBadge.classList.remove('listening');
     statusText.textContent = '대기 중';
@@ -446,7 +319,6 @@
     interimText.textContent = '';
   }
 
-  // ── 기타 ──────────────────────────────────────
   function clearAll() {
     confirmedBuffer = '';
     confirmedText.textContent = '';

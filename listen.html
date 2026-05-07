@@ -286,18 +286,34 @@ ws.onmessage = (event) => {
   textArea.scrollTop = textArea.scrollHeight;
 };
 
-    ws.onclose = () => {
-      console.log('WebSocket 끊김, 재연결 시도');
+ws.onclose = () => {
+  console.log('WebSocket 끊김, 재연결 시도');
+  if (isListening) {
+    setTimeout(() => {
       if (isListening) {
-        setTimeout(() => {
-          if (isListening) {
-            ws = new WebSocket(WS_URL);
-            setupWebSocket();
+        // mediaRecorder 재시작
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(e.data);
           }
-        }, 500);
-      }
-    };
+        };
 
+        // WebSocket 재연결
+        ws = new WebSocket(WS_URL);
+        setupWebSocket();
+
+        // WebSocket 열리면 mediaRecorder 시작
+        ws.addEventListener('open', () => {
+          mediaRecorder.start(100);
+        });
+      }
+    }, 500);
+  }
+};
     ws.onerror = (err) => {
       console.error('WebSocket 에러:', err);
     };

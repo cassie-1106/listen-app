@@ -275,13 +275,13 @@ ws.onmessage = (event) => {
     interimText.textContent = data.text;
     // 2초 동안 업데이트 없으면 강제로 확정
     if (interimTimer) clearTimeout(interimTimer);
-    interimTimer = setTimeout(() => {
-      if (interimText.textContent) {
-        confirmedBuffer += interimText.textContent + ' ';
-        confirmedText.textContent = confirmedBuffer;
-        interimText.textContent = '';
-      }
-    }, 2000);
+interimTimer = setTimeout(() => {
+  if (interimText.textContent) {
+    confirmedBuffer += interimText.textContent + ' ';
+    confirmedText.textContent = confirmedBuffer;
+    interimText.textContent = '';
+  }
+}, 800);
   }
   textArea.scrollTop = textArea.scrollHeight;
 };

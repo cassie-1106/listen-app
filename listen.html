@@ -263,25 +263,30 @@
     };
 
 let interimTimer = null;
+let lastInterimText = '';
 
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
   if (data.type === 'final') {
     if (interimTimer) clearTimeout(interimTimer);
+    interimTimer = null;
+    lastInterimText = '';
     confirmedBuffer += data.text + ' ';
     confirmedText.textContent = confirmedBuffer;
     interimText.textContent = '';
   } else if (data.type === 'interim') {
+    lastInterimText = data.text;
     interimText.textContent = data.text;
-    // 2초 동안 업데이트 없으면 강제로 확정
     if (interimTimer) clearTimeout(interimTimer);
-interimTimer = setTimeout(() => {
-  if (interimText.textContent) {
-    confirmedBuffer += interimText.textContent + ' ';
-    confirmedText.textContent = confirmedBuffer;
-    interimText.textContent = '';
-  }
-}, 800);
+    interimTimer = setTimeout(() => {
+      if (lastInterimText) {
+        confirmedBuffer += lastInterimText + ' ';
+        confirmedText.textContent = confirmedBuffer;
+        interimText.textContent = '';
+        lastInterimText = '';
+        interimTimer = null;
+      }
+    }, 800);
   }
   textArea.scrollTop = textArea.scrollHeight;
 };
